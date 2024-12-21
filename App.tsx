@@ -194,7 +194,7 @@ const App = () => {
               name="Dogrulama"
               component={Dogrulama}
               options={{
-                gestureEnabled: false, // Geri swipe hareketini devre dışı bırakır
+                gestureEnabled: false,
               }}
             />
           </>
@@ -225,7 +225,6 @@ const App = () => {
               options={{
                 gestureEnabled: false,
                 headerShown: false,
-                headerLeft: () => null, // Header'daki geri butonunu kaldır
               }}
             />
           </>

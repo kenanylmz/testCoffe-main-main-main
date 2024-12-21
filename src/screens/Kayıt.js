@@ -85,7 +85,6 @@ const Kayıt = ({navigation}) => {
     if (result.success) {
       navigation.replace('Dogrulama', {
         email: email,
-        userId: result.user.uid,
         fromRegistration: true,
         requiresVerification: true,
       });

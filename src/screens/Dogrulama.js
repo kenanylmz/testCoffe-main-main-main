@@ -7,27 +7,26 @@ import {
   Alert,
   Linking,
   BackHandler,
+  ActivityIndicator,
 } from 'react-native';
 import {useFocusEffect} from '@react-navigation/native';
-import {
-  checkEmailVerification,
-  resendVerificationEmail,
-} from '../config/firebase';
 import auth from '@react-native-firebase/auth';
 
 const Dogrulama = ({route, navigation}) => {
-  const currentUser = auth().currentUser;
-  const email = route.params?.email || currentUser?.email || 'your email';
+  const [loading, setLoading] = useState(false);
+  const [verificationChecking, setVerificationChecking] = useState(false);
+  const [timer, setTimer] = useState(30); // Yeni e-posta gönderimi için sayaç
+
+  const email = route.params?.email;
   const fromRegistration = route.params?.fromRegistration || false;
   const requiresVerification = route.params?.requiresVerification || false;
-  const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(false);
 
+  // Geri tuşunu devre dışı bırak
   useFocusEffect(
     React.useCallback(() => {
       const onBackPress = () => {
         if (requiresVerification) {
-          return true;
+          return true; // Geri tuşunu engelle
         }
         return false;
       };
@@ -38,58 +37,61 @@ const Dogrulama = ({route, navigation}) => {
     }, [requiresVerification]),
   );
 
-  const checkVerification = async () => {
-    if (!currentUser) {
-      Alert.alert('Hata', 'Kullanıcı oturumu bulunamadı.');
-      return;
+  // Sayaç için useEffect
+  useEffect(() => {
+    if (timer > 0) {
+      const interval = setInterval(() => {
+        setTimer(prevTimer => prevTimer - 1);
+      }, 1000);
+      return () => clearInterval(interval);
     }
+  }, [timer]);
 
-    setChecking(true);
+  // Otomatik doğrulama kontrolü
+  useEffect(() => {
+    if (requiresVerification) {
+      const checkInterval = setInterval(checkVerificationStatus, 3000);
+      return () => clearInterval(checkInterval);
+    }
+  }, [requiresVerification]);
+
+  const checkVerificationStatus = async () => {
+    if (!auth().currentUser) return;
+
+    setVerificationChecking(true);
     try {
-      await currentUser.reload();
-      const isVerified = currentUser.emailVerified;
-
-      if (isVerified) {
-        if (fromRegistration) {
-          Alert.alert(
-            'Başarılı',
-            'E-posta adresiniz doğrulandı!',
-            [
-              {
-                text: 'Tamam',
-                onPress: () => navigation.replace('Kafeler'),
-              },
-            ],
-            {cancelable: false},
-          );
-        } else {
-          Alert.alert('Başarılı', 'E-posta adresiniz doğrulandı!');
-        }
-      } else {
-        Alert.alert('Bilgi', 'E-posta adresiniz henüz doğrulanmamış.');
+      await auth().currentUser.reload();
+      if (auth().currentUser.emailVerified) {
+        clearInterval();
+        Alert.alert(
+          'Başarılı',
+          'E-posta adresiniz doğrulandı!',
+          [
+            {
+              text: 'Devam Et',
+              onPress: () => navigation.replace('Kafeler'),
+            },
+          ],
+          {cancelable: false},
+        );
       }
     } catch (error) {
-      Alert.alert(
-        'Hata',
-        error.message || 'Doğrulama kontrolü başarısız oldu.',
-      );
+      console.error('Doğrulama kontrolü hatası:', error);
     } finally {
-      setChecking(false);
+      setVerificationChecking(false);
     }
   };
 
   const handleResendEmail = async () => {
-    if (!currentUser) {
-      Alert.alert('Hata', 'Kullanıcı oturumu bulunamadı.');
-      return;
-    }
+    if (!auth().currentUser || timer > 0) return;
 
     setLoading(true);
     try {
-      await currentUser.sendEmailVerification();
+      await auth().currentUser.sendEmailVerification();
       Alert.alert('Başarılı', 'Doğrulama e-postası tekrar gönderildi.');
+      setTimer(30); // Sayacı yeniden başlat
     } catch (error) {
-      Alert.alert('Hata', error.message || 'E-posta gönderimi başarısız oldu.');
+      Alert.alert('Hata', 'E-posta gönderimi başarısız oldu.');
     } finally {
       setLoading(false);
     }
@@ -99,47 +101,41 @@ const Dogrulama = ({route, navigation}) => {
     Linking.openURL('mailto:');
   };
 
-  useEffect(() => {
-    if (requiresVerification) {
-      const checkInterval = setInterval(checkVerification, 5000);
-      return () => clearInterval(checkInterval);
-    }
-  }, [requiresVerification]);
-
   return (
     <View style={styles.container}>
       <View style={styles.innerContainer}>
         <Text style={styles.title}>E-posta Doğrulama</Text>
 
         <Text style={styles.description}>
-          {email === 'your email'
-            ? 'Lütfen e-posta adresinize gönderilen doğrulama e-postasını onaylayın.'
-            : `Lütfen ${email} adresine gönderilen doğrulama e-postasını onaylayın.`}
+          {email
+            ? `${email} adresine gönderilen doğrulama e-postasını onaylayın.`
+            : 'E-posta adresinize gönderilen doğrulama linkine tıklayın.'}
         </Text>
+
+        {verificationChecking && (
+          <ActivityIndicator style={styles.loader} color="#000" />
+        )}
 
         <TouchableOpacity style={styles.button} onPress={openEmail}>
           <Text style={styles.buttonText}>E-posta Uygulamasını Aç</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.button}
-          onPress={checkVerification}
-          disabled={checking}>
+          style={[styles.button, timer > 0 && styles.disabledButton]}
+          onPress={handleResendEmail}
+          disabled={timer > 0 || loading}>
           <Text style={styles.buttonText}>
-            {checking ? 'Kontrol Ediliyor...' : 'Doğrulama Durumunu Kontrol Et'}
+            {loading
+              ? 'Gönderiliyor...'
+              : timer > 0
+              ? `Yeniden Gönder (${timer}s)`
+              : 'Tekrar Gönder'}
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.resendButton}
-          onPress={handleResendEmail}
-          disabled={loading}>
-          <Text style={styles.resendButtonText}>
-            {loading
-              ? 'Gönderiliyor...'
-              : 'Doğrulama E-postasını Tekrar Gönder'}
-          </Text>
-        </TouchableOpacity>
+        <Text style={styles.infoText}>
+          Doğrulama e-postası gelmediyse spam klasörünü kontrol edin.
+        </Text>
       </View>
     </View>
   );
@@ -176,23 +172,23 @@ const styles = StyleSheet.create({
     marginTop: 20,
     width: '100%',
   },
+  disabledButton: {
+    backgroundColor: '#666',
+  },
   buttonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  resendButton: {
-    backgroundColor: 'transparent',
-    paddingHorizontal: 40,
-    paddingVertical: 15,
-    borderRadius: 10,
-    marginTop: 20,
+  loader: {
+    marginVertical: 20,
   },
-  resendButtonText: {
-    color: 'black',
-    fontSize: 16,
-    textDecorationLine: 'underline',
+  infoText: {
+    marginTop: 20,
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
   },
 });
 
