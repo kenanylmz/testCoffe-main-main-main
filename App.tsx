@@ -16,6 +16,7 @@ import Kuponlarım from './src/screens/Kuponlarım';
 import Profil from './src/screens/Profil';
 import Admin from './src/screens/Admin/Admin';
 import SuperAdmin from './src/screens/Admin/SuperAdmin';
+import SuperAdminHome from './src/screens/Admin/SuperAdminHome';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -103,7 +104,7 @@ const App = () => {
         const snapshot = await database()
           .ref(`users/${user.uid}`)
           .once('value');
-        
+
         const userData = snapshot.val();
         console.log('User role:', userData?.role); // Debug log
         setUserRole(userData?.role || 'user');
@@ -129,7 +130,13 @@ const App = () => {
   // Show loading spinner while initializing or loading role
   if (initializing || isRoleLoading) {
     return (
-      <View style={{flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFF'}}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#FFF',
+        }}>
         <ActivityIndicator size="large" color="#4A3428" />
       </View>
     );
@@ -140,8 +147,8 @@ const App = () => {
     return (
       <NavigationContainer>
         <Stack.Navigator screenOptions={{headerShown: false}}>
-          <Stack.Screen 
-            name="Splash" 
+          <Stack.Screen
+            name="Splash"
             component={Splash}
             listeners={{
               focus: () => {
@@ -173,8 +180,8 @@ const App = () => {
           // App screens based on user role
           <>
             {userRole === 'superadmin' && (
-              <Stack.Screen 
-                name="SuperAdmin" 
+              <Stack.Screen
+                name="SuperAdmin"
                 component={SuperAdmin}
                 options={{
                   headerShown: false,
@@ -183,8 +190,8 @@ const App = () => {
               />
             )}
             {userRole === 'admin' && (
-              <Stack.Screen 
-                name="AdminScreen" 
+              <Stack.Screen
+                name="AdminScreen"
                 component={Admin}
                 options={{
                   headerShown: false,

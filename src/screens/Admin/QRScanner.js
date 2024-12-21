@@ -1,16 +1,59 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Alert } from 'react-native';
-import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
-import { incrementCoffeeCount, redeemGift } from '../../config/firebase';
+import React, {useEffect, useState} from 'react';
+import {
+  View,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Alert,
+  BackHandler,
+} from 'react-native';
+import {
+  Camera,
+  useCameraDevice,
+  useCodeScanner,
+} from 'react-native-vision-camera';
+import {incrementCoffeeCount, redeemGift} from '../../config/firebase';
 import auth from '@react-native-firebase/auth';
 import database from '@react-native-firebase/database';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
+
+const updateCafeStats = async (cafeName, isGift) => {
+  const today = new Date().toISOString().split('T')[0];
+  const statsRef = database().ref(`cafeStats/${cafeName}/${today}`);
+
+  const snapshot = await statsRef.once('value');
+  const currentStats = snapshot.val() || {coffeeCount: 0, giftCount: 0};
+
+  if (isGift) {
+    currentStats.giftCount += 1;
+  } else {
+    currentStats.coffeeCount += 1;
+  }
+
+  await statsRef.update(currentStats);
+};
 
 const QRScanner = () => {
   const [hasPermission, setHasPermission] = useState(null);
   const [isScanning, setIsScanning] = useState(true);
   const device = useCameraDevice('back');
+  const navigation = useNavigation();
 
-  const handleQRCode = async (qrData) => {
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        navigation.goBack();
+        return true;
+      };
+
+      BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () =>
+        BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+    }, [navigation]),
+  );
+
+  const handleQRCode = async qrData => {
     try {
       console.log('Okunan QR kod:', qrData); // QR kod içeriğini logla
 
@@ -28,49 +71,67 @@ const QRScanner = () => {
       const adminData = adminSnapshot.val();
 
       if (!adminData || !adminData.cafename) {
-        throw new Error('Admin kafe ismi tanımlanmamış. Lütfen süper admin ile iletişime geçin.');
+        throw new Error(
+          'Admin kafe ismi tanımlanmamış. Lütfen süper admin ile iletişime geçin.',
+        );
       }
 
       // Check if QR code's cafename matches admin's cafename
       if (parsedQR.cafeName !== adminData.cafename) {
-        throw new Error(`Bu QR kod ${adminData.cafename} kafesine ait değil. Sadece kendi kafenize ait QR kodları okutabilirsiniz.`);
+        throw new Error(
+          `Bu QR kod ${adminData.cafename} kafesine ait değil. Sadece kendi kafenize ait QR kodları okutabilirsiniz.`,
+        );
       }
 
       // Kupon QR kodu kontrolü
       if (parsedQR.couponId && parsedQR.userId && parsedQR.cafeName) {
-        // Kupon kullanımı
-        const result = await redeemGift(parsedQR.userId, parsedQR.cafeName, parsedQR.couponId);
+        const result = await redeemGift(
+          parsedQR.userId,
+          parsedQR.cafeName,
+          parsedQR.couponId,
+        );
         if (result.success) {
-          Alert.alert('Başarılı', `${result.userName} Adlı Kullanıcının Bir Adet Hediye Kuponu Kullanılmıştır`, [{ text: 'Tamam' }]);
+          await updateCafeStats(parsedQR.cafeName, true); // Hediye kullanımı
+          Alert.alert(
+            'Başarılı',
+            `${result.userName} Adlı Kullanıcının Bir Adet Hediye Kuponu Kullanılmıştır`,
+          );
         } else {
           throw new Error(result.error);
         }
       } else if (parsedQR.userId && parsedQR.cafeName && parsedQR.timestamp) {
         // Kahve QR kodu işleme
         const safeTimestamp = parsedQR.timestamp.replace(/[.:\-]/g, '');
-        
-        const result = await incrementCoffeeCount(parsedQR.userId, parsedQR.cafeName, {
-          userId: parsedQR.userId,
-          cafeName: parsedQR.cafeName,
-          timestamp: safeTimestamp
-        });
+
+        const result = await incrementCoffeeCount(
+          parsedQR.userId,
+          parsedQR.cafeName,
+          {
+            userId: parsedQR.userId,
+            cafeName: parsedQR.cafeName,
+            timestamp: safeTimestamp,
+          },
+        );
         if (result.success) {
+          await updateCafeStats(parsedQR.cafeName, false); // Normal kahve satışı
           Alert.alert(
             'Başarılı',
-            result.hasGift 
+            result.hasGift
               ? `5 kahve tamamlandı! Hediye kazanıldı!`
               : `Kahve sayısı: ${result.coffeeCount}/5`,
-            [{ text: 'Tamam' }]
+            [{text: 'Tamam'}],
           );
         } else {
           throw new Error(result.error);
         }
       } else {
-        throw new Error('QR kod geçersiz formatta. Lütfen Müdavim sayfasından yeni bir QR kod oluşturun.');
+        throw new Error(
+          'QR kod geçersiz formatta. Lütfen Müdavim sayfasından yeni bir QR kod oluşturun.',
+        );
       }
     } catch (error) {
       // Sadece Alert göster, loglama yapma
-      Alert.alert('Hata', error.message, [{ text: 'Tamam' }]);
+      Alert.alert('Hata', error.message, [{text: 'Tamam'}]);
     } finally {
       // 2 saniye sonra yeni taramaya izin ver
       setTimeout(() => {
@@ -81,12 +142,12 @@ const QRScanner = () => {
 
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
-    onCodeScanned: (codes) => {
+    onCodeScanned: codes => {
       if (codes.length > 0 && isScanning) {
         setIsScanning(false);
         handleQRCode(codes[0].value);
       }
-    }
+    },
   });
 
   useEffect(() => {
@@ -114,10 +175,7 @@ const QRScanner = () => {
     return (
       <View style={styles.container}>
         <Text style={styles.text}>Kamera kullanımı için izin gerekli</Text>
-        <TouchableOpacity 
-          style={styles.button}
-          onPress={requestPermission}
-        >
+        <TouchableOpacity style={styles.button} onPress={requestPermission}>
           <Text style={styles.buttonText}>İzin Ver</Text>
         </TouchableOpacity>
       </View>
@@ -180,7 +238,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#4A3428',
     backgroundColor: 'transparent',
-  }
+  },
 });
 
 export default QRScanner;

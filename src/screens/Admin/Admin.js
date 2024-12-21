@@ -1,13 +1,20 @@
-import React from 'react'; //Admin 
-import { View, Text, StyleSheet, TouchableOpacity, Image, BackHandler } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import auth from '@react-native-firebase/auth';
+import React from 'react';
+import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  Alert,
+} from 'react-native';
 import QRScanner from './QRScanner';
+import AdminHome from './AdminHome'; // Mevcut Admin içeriğini buraya taşıyacağız
+import auth from '@react-native-firebase/auth';
 
 const Tab = createBottomTabNavigator();
 
-const AdminHome = ({ navigation }) => {
+const Admin = () => {
   const handleLogout = async () => {
     try {
       await auth().signOut();
@@ -16,7 +23,7 @@ const AdminHome = ({ navigation }) => {
       console.error('Çıkış yapılırken hata:', error);
       Alert.alert(
         'Hata',
-        'Çıkış yapılırken bir hata oluştu. Lütfen tekrar deneyin.'
+        'Çıkış yapılırken bir hata oluştu. Lütfen tekrar deneyin.',
       );
     }
   };
@@ -25,85 +32,67 @@ const AdminHome = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Admin Panel</Text>
-        <TouchableOpacity 
-          onPress={handleLogout}
-          style={styles.logoutButton}
-        >
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
           <Image
             source={require('../../styles/cıkıs_icon.png')}
             style={styles.logoutIcon}
           />
         </TouchableOpacity>
       </View>
-      <View style={styles.content}>
-        <Text style={styles.text}>Admin Paneli</Text>
-      </View>
+
+      <Tab.Navigator
+        screenOptions={{
+          tabBarStyle: {
+            backgroundColor: '#FFF',
+            borderTopWidth: 1,
+            borderTopColor: '#F0F0F0',
+            height: 60,
+          },
+          tabBarActiveTintColor: '#4A3428',
+          tabBarInactiveTintColor: '#999',
+          headerShown: false,
+        }}>
+        <Tab.Screen
+          name="Ana Sayfa"
+          component={AdminHome}
+          options={{
+            tabBarIcon: ({focused}) => (
+              <Image
+                source={require('../../styles/home_icon.png')}
+                style={{
+                  width: 24,
+                  height: 24,
+                  tintColor: focused ? '#4A3428' : '#999',
+                }}
+              />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="QR Tara"
+          component={QRScanner}
+          options={{
+            tabBarIcon: ({focused}) => (
+              <Image
+                source={require('../../styles/qr_icon.png')}
+                style={{
+                  width: 24,
+                  height: 24,
+                  tintColor: focused ? '#4A3428' : '#999',
+                }}
+              />
+            ),
+          }}
+        />
+      </Tab.Navigator>
     </View>
-  );
-};
-
-const Admin = () => {
-  // Geri tuşunu engelle
-  useFocusEffect(
-    React.useCallback(() => {
-      const onBackPress = () => {
-        return true; // true döndürerek geri tuşunu engelliyoruz
-      };
-
-      BackHandler.addEventListener('hardwareBackPress', onBackPress);
-
-      return () =>
-        BackHandler.removeEventListener('hardwareBackPress', onBackPress);
-    }, [])
-  );
-
-  return (
-    <Tab.Navigator
-      screenOptions={{
-        tabBarStyle: {
-          backgroundColor: '#FFF',
-          borderTopWidth: 1,
-          borderTopColor: '#F0F0F0',
-        },
-        tabBarActiveTintColor: '#4A3428',
-        tabBarInactiveTintColor: '#999',
-        headerShown: false,
-      }}
-    >
-      <Tab.Screen 
-        name="AdminHome" 
-        component={AdminHome}
-        options={{
-          tabBarLabel: 'Ana Sayfa',
-          tabBarIcon: ({ color }) => (
-            <Image
-              source={require('../../styles/anasayfa_icon.png')}
-              style={[styles.tabIcon, { tintColor: color }]}
-            />
-          ),
-        }}
-      />
-      <Tab.Screen 
-        name="QRScanner" 
-        component={QRScanner}
-        options={{
-          tabBarLabel: 'QR Okut',
-          tabBarIcon: ({ color }) => (
-            <Image
-              source={require('../../styles/kart_icon.png')}
-              style={[styles.tabIcon, { tintColor: color }]}
-            />
-          ),
-        }}
-      />
-    </Tab.Navigator>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF',
   },
   header: {
     flexDirection: 'row',
@@ -127,19 +116,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     tintColor: '#4A3428',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  text: {
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  tabIcon: {
-    width: 24,
-    height: 24,
   },
 });
 

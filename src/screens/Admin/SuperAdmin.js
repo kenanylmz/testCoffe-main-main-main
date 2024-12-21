@@ -12,6 +12,8 @@ import {
 import {useFocusEffect} from '@react-navigation/native';
 import AdminEkle from './AdminEkle';
 import Adminler from './Adminler';
+import QRScanner from './QRScanner';
+import SuperAdminHome from './SuperAdminHome';
 import auth from '@react-native-firebase/auth';
 import database from '@react-native-firebase/database';
 
@@ -94,6 +96,22 @@ const SuperAdmin = () => {
           headerShown: false,
         }}>
         <Tab.Screen
+          name="Ana Sayfa"
+          component={SuperAdminHome}
+          options={{
+            tabBarIcon: ({focused}) => (
+              <Image
+                source={require('../../styles/home_icon.png')}
+                style={{
+                  width: 24,
+                  height: 24,
+                  tintColor: focused ? '#4A3428' : '#999',
+                }}
+              />
+            ),
+          }}
+        />
+        <Tab.Screen
           name="Admin Ekle"
           component={AdminEkleWithCafeName}
           options={{
@@ -116,6 +134,22 @@ const SuperAdmin = () => {
             tabBarIcon: ({focused}) => (
               <Image
                 source={require('../../styles/profile_icon.png')}
+                style={{
+                  width: 24,
+                  height: 24,
+                  tintColor: focused ? '#4A3428' : '#999',
+                }}
+              />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="QR Tara"
+          component={QRScanner}
+          options={{
+            tabBarIcon: ({focused}) => (
+              <Image
+                source={require('../../styles/qr_icon.png')}
                 style={{
                   width: 24,
                   height: 24,
