@@ -14,7 +14,9 @@ import auth from '@react-native-firebase/auth';
 const Profil = ({navigation}) => {
   const currentUser = auth().currentUser;
   const [isEditing, setIsEditing] = useState(false);
-  const [displayName, setDisplayName] = useState(currentUser?.displayName || '');
+  const [displayName, setDisplayName] = useState(
+    currentUser?.displayName || '',
+  );
   const [firstName, setFirstName] = useState(
     currentUser?.displayName?.split(' ')[0] || '',
   );
@@ -192,7 +194,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#4A3428',
+    color: '#000',
   },
   editButton: {
     backgroundColor: '#4A3428',

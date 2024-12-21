@@ -17,6 +17,7 @@ import Profil from './src/screens/Profil';
 import Admin from './src/screens/Admin/Admin';
 import SuperAdmin from './src/screens/Admin/SuperAdmin';
 import SuperAdminHome from './src/screens/Admin/SuperAdminHome';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -92,6 +93,7 @@ const App = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isFirstLaunch, setIsFirstLaunch] = useState(true);
   const [isRoleLoading, setIsRoleLoading] = useState(true);
+  const [isFirstTime, setIsFirstTime] = useState(true);
 
   // Handle user state changes
   async function onAuthStateChanged(user: FirebaseAuthTypes.User | null) {
@@ -100,17 +102,15 @@ const App = () => {
     if (user) {
       setIsRoleLoading(true);
       try {
-        // Get user role from database
         const snapshot = await database()
           .ref(`users/${user.uid}`)
           .once('value');
 
         const userData = snapshot.val();
-        console.log('User role:', userData?.role); // Debug log
         setUserRole(userData?.role || 'user');
       } catch (error) {
         console.error('Error fetching user role:', error);
-        setUserRole('user'); // Fallback to user role
+        setUserRole('user');
       } finally {
         setIsRoleLoading(false);
       }
@@ -127,7 +127,33 @@ const App = () => {
     return subscriber;
   }, []);
 
-  // Show loading spinner while initializing or loading role
+  useEffect(() => {
+    const checkFirstTime = async () => {
+      try {
+        const value = await AsyncStorage.getItem('isFirstTime');
+        if (value === null) {
+          await AsyncStorage.setItem('isFirstTime', 'false');
+          setIsFirstTime(true);
+        } else {
+          setIsFirstTime(false);
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    checkFirstTime();
+  }, []);
+
+  // Splash ekranı için timer effect'i
+  useEffect(() => {
+    if (isFirstLaunch) {
+      const timer = setTimeout(() => {
+        setIsFirstLaunch(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isFirstLaunch]);
+
   if (initializing || isRoleLoading) {
     return (
       <View
@@ -142,70 +168,66 @@ const App = () => {
     );
   }
 
-  // Splash ekranları için ayrı Stack
-  if (isFirstLaunch && !user) {
-    return (
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{headerShown: false}}>
+  return (
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{headerShown: false}}>
+        {isFirstLaunch ? (
+          <Stack.Screen name="Splash" component={Splash} />
+        ) : isFirstTime ? (
           <Stack.Screen
-            name="Splash"
-            component={Splash}
+            name="SplashTwo"
+            component={SplashTwo}
             listeners={{
               focus: () => {
                 setTimeout(() => {
-                  setIsFirstLaunch(false);
+                  setIsFirstTime(false);
                 }, 2000);
               },
             }}
           />
-          <Stack.Screen name="SplashTwo" component={SplashTwo} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    );
-  }
-
-  console.log('Current user role:', userRole); // Debug log
-
-  return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{headerShown: false}}>
-        {!user ? (
+        ) : !user ? (
           // Auth screens
           <>
             <Stack.Screen name="Login" component={Login} />
             <Stack.Screen name="Kayıt" component={Kayıt} />
-            <Stack.Screen name="Dogrulama" component={Dogrulama} />
+            <Stack.Screen
+              name="Dogrulama"
+              component={Dogrulama}
+              options={{
+                gestureEnabled: false, // Geri swipe hareketini devre dışı bırakır
+              }}
+            />
           </>
         ) : (
           // App screens based on user role
           <>
             {userRole === 'superadmin' && (
-              <Stack.Screen
-                name="SuperAdmin"
-                component={SuperAdmin}
-                options={{
-                  headerShown: false,
-                  gestureEnabled: false,
-                }}
-              />
+              <Stack.Screen name="SuperAdmin" component={SuperAdmin} />
             )}
             {userRole === 'admin' && (
-              <Stack.Screen
-                name="AdminScreen"
-                component={Admin}
-                options={{
-                  headerShown: false,
-                  gestureEnabled: false,
-                }}
-              />
+              <Stack.Screen name="AdminScreen" component={Admin} />
             )}
             {userRole === 'user' && (
               <>
-                <Stack.Screen name="Kafeler" component={Kafeler} />
+                <Stack.Screen
+                  name="Kafeler"
+                  component={Kafeler}
+                  options={{
+                    gestureEnabled: false,
+                  }}
+                />
                 <Stack.Screen name="MainTabs" component={TabNavigator} />
               </>
             )}
-            <Stack.Screen name="Dogrulama" component={Dogrulama} />
+            <Stack.Screen
+              name="Dogrulama"
+              component={Dogrulama}
+              options={{
+                gestureEnabled: false,
+                headerShown: false,
+                headerLeft: () => null, // Header'daki geri butonunu kaldır
+              }}
+            />
           </>
         )}
       </Stack.Navigator>

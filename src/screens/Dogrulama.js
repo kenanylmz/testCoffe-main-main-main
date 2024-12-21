@@ -6,15 +6,37 @@ import {
   TouchableOpacity,
   Alert,
   Linking,
+  BackHandler,
 } from 'react-native';
-import {checkEmailVerification, resendVerificationEmail} from '../config/firebase';
+import {useFocusEffect} from '@react-navigation/native';
+import {
+  checkEmailVerification,
+  resendVerificationEmail,
+} from '../config/firebase';
 import auth from '@react-native-firebase/auth';
 
 const Dogrulama = ({route, navigation}) => {
   const currentUser = auth().currentUser;
   const email = route.params?.email || currentUser?.email || 'your email';
+  const fromRegistration = route.params?.fromRegistration || false;
+  const requiresVerification = route.params?.requiresVerification || false;
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        if (requiresVerification) {
+          return true;
+        }
+        return false;
+      };
+
+      BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () =>
+        BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+    }, [requiresVerification]),
+  );
 
   const checkVerification = async () => {
     if (!currentUser) {
@@ -24,26 +46,33 @@ const Dogrulama = ({route, navigation}) => {
 
     setChecking(true);
     try {
-      await currentUser.reload(); // Kullanıcı bilgilerini yenile
+      await currentUser.reload();
       const isVerified = currentUser.emailVerified;
-      
+
       if (isVerified) {
-        Alert.alert(
-          'Başarılı',
-          'E-posta adresiniz doğrulandı!',
-          [
-            {
-              text: 'Tamam',
-              onPress: () => navigation.replace('Kafeler'),
-            },
-          ],
-          {cancelable: false}
-        );
+        if (fromRegistration) {
+          Alert.alert(
+            'Başarılı',
+            'E-posta adresiniz doğrulandı!',
+            [
+              {
+                text: 'Tamam',
+                onPress: () => navigation.replace('Kafeler'),
+              },
+            ],
+            {cancelable: false},
+          );
+        } else {
+          Alert.alert('Başarılı', 'E-posta adresiniz doğrulandı!');
+        }
       } else {
         Alert.alert('Bilgi', 'E-posta adresiniz henüz doğrulanmamış.');
       }
     } catch (error) {
-      Alert.alert('Hata', error.message || 'Doğrulama kontrolü başarısız oldu.');
+      Alert.alert(
+        'Hata',
+        error.message || 'Doğrulama kontrolü başarısız oldu.',
+      );
     } finally {
       setChecking(false);
     }
@@ -71,17 +100,19 @@ const Dogrulama = ({route, navigation}) => {
   };
 
   useEffect(() => {
-    const checkInterval = setInterval(checkVerification, 5000);
-    return () => clearInterval(checkInterval);
-  }, []);
+    if (requiresVerification) {
+      const checkInterval = setInterval(checkVerification, 5000);
+      return () => clearInterval(checkInterval);
+    }
+  }, [requiresVerification]);
 
   return (
     <View style={styles.container}>
       <View style={styles.innerContainer}>
         <Text style={styles.title}>E-posta Doğrulama</Text>
-        
+
         <Text style={styles.description}>
-          {email === 'your email' 
+          {email === 'your email'
             ? 'Lütfen e-posta adresinize gönderilen doğrulama e-postasını onaylayın.'
             : `Lütfen ${email} adresine gönderilen doğrulama e-postasını onaylayın.`}
         </Text>
@@ -90,8 +121,8 @@ const Dogrulama = ({route, navigation}) => {
           <Text style={styles.buttonText}>E-posta Uygulamasını Aç</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.button} 
+        <TouchableOpacity
+          style={styles.button}
           onPress={checkVerification}
           disabled={checking}>
           <Text style={styles.buttonText}>
@@ -104,7 +135,9 @@ const Dogrulama = ({route, navigation}) => {
           onPress={handleResendEmail}
           disabled={loading}>
           <Text style={styles.resendButtonText}>
-            {loading ? 'Gönderiliyor...' : 'Doğrulama E-postasını Tekrar Gönder'}
+            {loading
+              ? 'Gönderiliyor...'
+              : 'Doğrulama E-postasını Tekrar Gönder'}
           </Text>
         </TouchableOpacity>
       </View>

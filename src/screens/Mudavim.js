@@ -15,7 +15,7 @@ import database from '@react-native-firebase/database';
 
 const windowWidth = Dimensions.get('window').width;
 
-const Mudavim = ({route}) => {
+const Mudavim = ({route, navigation}) => {
   const cafeName = route?.params?.cafeName;
   const logoPath = route?.params?.logoPath;
   const currentUser = auth().currentUser;
@@ -23,19 +23,21 @@ const Mudavim = ({route}) => {
 
   useEffect(() => {
     if (currentUser && cafeName) {
-      const userCafeRef = database().ref(`users/${currentUser.uid}/cafes/${cafeName}`);
-      const unsubscribe = userCafeRef.on('value', (snapshot) => {
+      const userCafeRef = database().ref(
+        `users/${currentUser.uid}/cafes/${cafeName}`,
+      );
+      const unsubscribe = userCafeRef.on('value', snapshot => {
         const cafeData = snapshot.val();
         if (cafeData) {
           setProgress(cafeData.coffeeCount || 0);
-          
+
           // 5 kahveye ulaşıldığında bildirim göster
           if (cafeData.coffeeCount === 5 && cafeData.hasGift) {
             Alert.alert(
               'Tebrikler! 🎉',
               'Müdavim seviyesine ulaştınız! Kuponlarım sayfasından hediye kahve kuponunuzu görebilirsiniz.',
-              [{ text: 'Tamam', style: 'default' }],
-              { cancelable: true }
+              [{text: 'Tamam', style: 'default'}],
+              {cancelable: true},
             );
           }
         }
@@ -56,9 +58,15 @@ const Mudavim = ({route}) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.welcomeText}>
-          Hoşgeldiniz, {currentUser?.displayName || 'Misafir'}
-        </Text>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.navigate('Kafeler')}>
+          <Image
+            source={require('../styles/back_icon.png')}
+            style={styles.backIcon}
+          />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Müdavim</Text>
       </View>
 
       <View style={styles.content}>
@@ -115,10 +123,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   header: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
+  },
+  backButton: {
+    padding: 5,
+  },
+  backIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#4A3428',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#4A3428',
+    marginLeft: 15,
   },
   welcomeText: {
     fontSize: 18,

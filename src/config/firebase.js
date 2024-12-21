@@ -3,18 +3,15 @@ import database from '@react-native-firebase/database';
 
 export const signUp = async (email, password, name, surname) => {
   try {
-    // Create user with email and password
     const userCredential = await auth().createUserWithEmailAndPassword(
       email,
       password,
     );
 
-    // Update user profile with name and surname
     await userCredential.user.updateProfile({
       displayName: `${name} ${surname}`,
     });
 
-    // Add user to realtime database with default role and usercafe
     await database().ref(`users/${userCredential.user.uid}`).set({
       email: email,
       name: name,
@@ -24,7 +21,6 @@ export const signUp = async (email, password, name, surname) => {
       createdAt: database.ServerValue.TIMESTAMP,
     });
 
-    // Send verification email
     await userCredential.user.sendEmailVerification();
 
     return {
@@ -112,6 +108,7 @@ export const signIn = async (email, password) => {
 export const signOut = async () => {
   try {
     await auth().signOut();
+    // Direkt olarak Login sayfasına yönlendirilecek
     return {success: true};
   } catch (error) {
     return {success: false, error: error.message};

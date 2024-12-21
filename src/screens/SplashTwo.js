@@ -21,14 +21,7 @@ const SplashTwo = ({navigation}) => {
   };
 
   const handleSkip = () => {
-    if (currentPage < 2) {
-      scrollViewRef.current?.scrollTo({
-        x: width * (currentPage + 1),
-        animated: true,
-      });
-    } else {
-      navigation.replace('Login');
-    }
+    navigation.replace('Login');
   };
 
   const handleSkipToLogin = () => {

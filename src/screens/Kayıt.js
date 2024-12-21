@@ -6,6 +6,9 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import {signUp} from '../config/firebase';
 
@@ -18,9 +21,9 @@ const Kayıt = ({navigation}) => {
   const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const validatePassword = (text) => {
+  const validatePassword = text => {
     setPassword(text);
-    
+
     if (text.length < 8) {
       setPasswordError('Şifre en az 8 karakter olmalıdır!');
       return false;
@@ -41,9 +44,9 @@ const Kayıt = ({navigation}) => {
     return true;
   };
 
-  const validateConfirmPassword = (text) => {
+  const validateConfirmPassword = text => {
     setConfirmPassword(text);
-    
+
     if (text !== password) {
       setPasswordError('Şifreler eşleşmiyor!');
       return false;
@@ -80,91 +83,92 @@ const Kayıt = ({navigation}) => {
     setLoading(false);
 
     if (result.success) {
-      Alert.alert(
-        'E-posta Doğrulama',
-        'Doğrulama e-postası gönderildi. Lütfen e-postanızı kontrol edin.',
-        [
-          {
-            text: 'Tamam',
-            onPress: () => {
-              navigation.navigate('Dogrulama', {
-                email: email,
-                userId: result.user.uid
-              });
-            },
-          },
-        ],
-        { cancelable: false }
-      );
+      navigation.replace('Dogrulama', {
+        email: email,
+        userId: result.user.uid,
+        fromRegistration: true,
+        requiresVerification: true,
+      });
     } else {
       Alert.alert('Hata', result.error || 'Kayıt işlemi başarısız oldu.');
     }
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.innerContainer}>
-        <Text style={styles.title}>Hesap Oluştur</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled">
+        <View style={styles.innerContainer}>
+          <Text style={styles.title}>Hesap Oluştur</Text>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Ad"
-          placeholderTextColor="#666"
-          value={name}
-          onChangeText={setName}
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="Ad"
+            placeholderTextColor="#666"
+            value={name}
+            onChangeText={setName}
+          />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Soyad"
-          placeholderTextColor="#666"
-          value={surname}
-          onChangeText={setSurname}
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="Soyad"
+            placeholderTextColor="#666"
+            value={surname}
+            onChangeText={setSurname}
+          />
 
-        <TextInput
-          style={styles.input}
-          placeholder="E-mail"
-          placeholderTextColor="#666"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+          <TextInput
+            style={styles.input}
+            placeholder="E-mail"
+            placeholderTextColor="#666"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
 
-        <TextInput
-          style={[styles.input, passwordError && password ? styles.errorInput : null]}
-          placeholder="Şifre"
-          placeholderTextColor="#666"
-          value={password}
-          onChangeText={validatePassword}
-          secureTextEntry
-        />
+          <TextInput
+            style={[
+              styles.input,
+              passwordError && password ? styles.errorInput : null,
+            ]}
+            placeholder="Şifre"
+            placeholderTextColor="#666"
+            value={password}
+            onChangeText={validatePassword}
+            secureTextEntry
+          />
 
-        <TextInput
-          style={[styles.input, passwordError && confirmPassword ? styles.errorInput : null]}
-          placeholder="Tekrar Şifre"
-          placeholderTextColor="#666"
-          value={confirmPassword}
-          onChangeText={validateConfirmPassword}
-          secureTextEntry
-        />
+          <TextInput
+            style={[
+              styles.input,
+              passwordError && confirmPassword ? styles.errorInput : null,
+            ]}
+            placeholder="Tekrar Şifre"
+            placeholderTextColor="#666"
+            value={confirmPassword}
+            onChangeText={validateConfirmPassword}
+            secureTextEntry
+          />
 
-        {passwordError ? (
-          <Text style={styles.errorText}>{passwordError}</Text>
-        ) : null}
+          {passwordError ? (
+            <Text style={styles.errorText}>{passwordError}</Text>
+          ) : null}
 
-        <TouchableOpacity 
-          style={styles.registerButton} 
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          <Text style={styles.registerButtonText}>
-            {loading ? 'Kayıt yapılıyor...' : 'Kayıt Ol'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          <TouchableOpacity
+            style={styles.registerButton}
+            onPress={handleRegister}
+            disabled={loading}>
+            <Text style={styles.registerButtonText}>
+              {loading ? 'Kayıt yapılıyor...' : 'Kayıt Ol'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -172,6 +176,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#C8B39E82',
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: 20,
   },
   innerContainer: {
@@ -195,6 +202,7 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 15,
     fontSize: 16,
+    color: '#000',
   },
   errorInput: {
     borderColor: 'red',

@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import {signIn} from '../config/firebase';
 import auth from '@react-native-firebase/auth';
@@ -17,6 +20,7 @@ const Login = ({navigation}) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -26,10 +30,10 @@ const Login = ({navigation}) => {
 
     try {
       setLoading(true);
-      
+
       const result = await signIn(email, password);
       console.log('Login result:', result);
-      
+
       if (result.success && result.user) {
         if (!result.user.emailVerified) {
           // If email is not verified, navigate to verification screen
@@ -40,7 +44,7 @@ const Login = ({navigation}) => {
         }
         // Log the user role we received
         console.log('User role from login:', result.role);
-        
+
         // We don't need to navigate here as App.tsx will handle it based on auth state
       } else if (!result.success) {
         // Show specific error message from Firebase
@@ -54,7 +58,8 @@ const Login = ({navigation}) => {
               errorMessage = 'Bu hesap devre dışı bırakılmış.';
               break;
             case 'auth/user-not-found':
-              errorMessage = 'Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı.';
+              errorMessage =
+                'Bu e-posta adresi ile kayıtlı kullanıcı bulunamadı.';
               break;
             case 'auth/wrong-password':
               errorMessage = 'Hatalı şifre.';
@@ -87,70 +92,89 @@ const Login = ({navigation}) => {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.topSection}>
-        <Image
-          source={require('../styles/splash_coffe.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-      </View>
-      
-      <View style={styles.bottomSection}>
-        <Text style={styles.welcomeText}>HOŞGELDİNİZ</Text>
-        <Text style={styles.instructionText}>
-          Giriş yapmak veya kayıt olmak için e-posta ve şifrenizi giriniz.
-        </Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="E-mail"
-          placeholderTextColor="#666"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          editable={!loading}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#666"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          editable={!loading}
-        />
-
-        <TouchableOpacity 
-          style={styles.rememberMeContainer} 
-          onPress={() => setRememberMe(!rememberMe)}
-          disabled={loading}
-        >
-          <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-            {rememberMe && <Text style={styles.checkmark}>✓</Text>}
-          </View>
-          <Text style={styles.rememberMeText}>Beni Hatırla</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.loginButton, loading && styles.loginButtonDisabled]} 
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          <Text style={styles.loginButtonText}>
-            {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={styles.registerContainer}>
-          <Text style={styles.registerText}>Hesabınız yok mu? </Text>
-          <TouchableOpacity onPress={handleRegister} disabled={loading}>
-            <Text style={styles.registerLink}>Kayıt Olun</Text>
-          </TouchableOpacity>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled">
+        <View style={styles.topSection}>
+          <Image
+            source={require('../styles/splash_coffe.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
         </View>
-      </View>
-    </View>
+
+        <View style={styles.bottomSection}>
+          <Text style={styles.welcomeText}>HOŞGELDİNİZ</Text>
+          <Text style={styles.instructionText}>
+            Giriş yapmak veya kayıt olmak için e-posta ve şifrenizi giriniz.
+          </Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="E-mail"
+            placeholderTextColor="#666"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            editable={!loading}
+          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Password"
+              placeholderTextColor="#666"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              editable={!loading}
+            />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowPassword(!showPassword)}>
+              <Image
+                source={
+                  showPassword
+                    ? require('../styles/eye_off.png')
+                    : require('../styles/eye.png')
+                }
+                style={styles.eyeIcon}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={styles.rememberMeContainer}
+            onPress={() => setRememberMe(!rememberMe)}
+            disabled={loading}>
+            <View
+              style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+              {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={styles.rememberMeText}>Beni Hatırla</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+            onPress={handleLogin}
+            disabled={loading}>
+            <Text style={styles.loginButtonText}>
+              {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.registerContainer}>
+            <Text style={styles.registerText}>Hesabınız yok mu? </Text>
+            <TouchableOpacity onPress={handleRegister} disabled={loading}>
+              <Text style={styles.registerLink}>Kayıt Olun</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -158,6 +182,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'white',
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   loadingContainer: {
     justifyContent: 'center',
@@ -205,6 +232,7 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 15,
     fontSize: 16,
+    color: '#000',
   },
   rememberMeContainer: {
     flexDirection: 'row',
@@ -264,6 +292,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'blue',
     fontWeight: 'bold',
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    marginBottom: 15,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 15,
+    fontSize: 16,
+    color: '#000',
+  },
+  eyeButton: {
+    padding: 10,
+  },
+  eyeIcon: {
+    width: 24,
+    height: 24,
+    tintColor: '#666',
   },
 });
 
